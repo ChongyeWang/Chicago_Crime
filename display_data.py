@@ -24,7 +24,6 @@ for row_index in range(len(data_file['time_t'])):
         date_event_type[event_date][event_type] = 0
     date_event_type[event_date][event_type] += 1
 
-#print(date_event_type)
 
 for date in date_event_type:
     print(date)
