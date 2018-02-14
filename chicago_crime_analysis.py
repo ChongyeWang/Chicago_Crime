@@ -16,6 +16,27 @@ from datetime import timedelta
 import logging
 logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S %p', level=logging.INFO)
 logger = logging.getLogger(__name__)
+import numpy as np
+import multiprocessing
+from progressbar import ProgressBar, SimpleProgress
+import tqdm
+
+def parallelize_dataframe(distance_range, time_range, target_file, data_file, func):
+    num_cores = multiprocessing.cpu_count()-1 #leave one free to not freeze machine
+    num_partitions = num_cores #number of partitions to split dataframe
+    df_split = np.array_split(target_file, num_partitions)
+    print len(df_split)
+    a = [(split, data_file, time_range, distance_range) for split in df_split]
+    print len(a)
+    pool = multiprocessing.Pool(num_cores)
+    results = []
+    for x in tqdm.tqdm(pool.imap_unordered(func, a), total=num_partitions):
+        results.append(x)
+    #df = pandas.concat(pool.map(func, a))
+    pool.close()
+    pool.join()
+    df = pandas.concat(results)
+    return df
 
 
 def closest(target_file_row, data_file_row, time_range, distance_range):
@@ -26,19 +47,22 @@ def closest(target_file_row, data_file_row, time_range, distance_range):
     except:
         return False
 
-def analyze(distance_range, time_range, target_file, data_file):
+def analyze(args):
+    target_file, data_file, time_range, distance_range = args
     satisfied_target = []
     for target_index, target_row in target_file.iterrows():
-        logger.info('Checking target row {}'.format(target_index))
+        #print('Checking target row {}'.format(target_index))
+        #logger.info('Checking target row {}'.format(target_index))
         for data_index, data_row in data_file.iterrows():
-            if(data_index%10000==0):
-                logger.info('Checking data row {}'.format(data_index))
-            if(closest(target_row, data_row, time_range, distance_range)):
+            """if(data_index%10000==0):
+                #logger.info('Checking data row {}'.format(data_index))
+                print('Checking data row {}'.format(data_index))"""
+        if(closest(target_row, data_row, time_range, distance_range)):
                 #time_t, y_t, x_t, x_d, y_d, time_t, type_d
                 info_list = target_row.tolist()
                 info_list.extend(data_row.tolist())
                 satisfied_target.append(info_list)
-        logger.info('Finished target row {}'.format(target_index))
+        #logger.info('Finished target row {}'.format(target_index))
     return satisfied_target
 
 
@@ -74,6 +98,7 @@ if __name__ == "__main__":
             logger.info('Finished reading target {}'.format(target_name))
             #start analysis for one person
             logger.info('Started analysis for target {}'.format(target_name))
-            list = analyze(100, 60, target_file, data_file)
+            #list = analyze(100, 60, target_file, data_file)
+            list = parallelize_dataframe(100, 60, target_file, data_file, analyze)
             logger.info('Finished analysis for target {}'.format(target_name))
             exit()
