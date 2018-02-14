@@ -18,12 +18,12 @@ logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S
 logger = logging.getLogger(__name__)
 import numpy as np
 import multiprocessing
-from progressbar import ProgressBar, SimpleProgress
+#from progressbar import ProgressBar, SimpleProgress
 import tqdm
 
 def parallelize_dataframe(distance_range, time_range, target_file, data_file, func):
     num_cores = multiprocessing.cpu_count()-1 #leave one free to not freeze machine
-    num_partitions = num_cores #number of partitions to split dataframe
+    num_partitions = 19000#num_cores #number of partitions to split dataframe
     df_split = np.array_split(target_file, num_partitions)
     print len(df_split)
     a = [(split, data_file, time_range, distance_range) for split in df_split]
@@ -31,7 +31,7 @@ def parallelize_dataframe(distance_range, time_range, target_file, data_file, fu
     pool = multiprocessing.Pool(num_cores)
     results = []
     for x in tqdm.tqdm(pool.imap_unordered(func, a), total=num_partitions):
-        results.append(x)
+        results.extend(x)
     #df = pandas.concat(pool.map(func, a))
     pool.close()
     pool.join()
@@ -69,7 +69,7 @@ def analyze(args):
 if __name__ == "__main__":
     #Columns that are included in data_file
     fields = ['X', 'Y', 'USER_Event_Type', 'USER_Entry_Date___Time'] #changed the date field to the one that looks correct need to ask
-    folder = '/Users/ismini/Documents/Dataset/GPS/'
+    folder = 'Dataset/GPS/'
     filename = 'FA171521_ARCGIS_GPS_50.csv'
     #Include the x, y, user_event_type, user_clrdate
     logger.info('Started reading data file')
@@ -101,4 +101,5 @@ if __name__ == "__main__":
             #list = analyze(100, 60, target_file, data_file)
             list = parallelize_dataframe(100, 60, target_file, data_file, analyze)
             logger.info('Finished analysis for target {}'.format(target_name))
+            list.to_csv(file_name, sep=',', encoding='utf-8')
             exit()
