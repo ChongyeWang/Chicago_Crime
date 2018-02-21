@@ -108,7 +108,11 @@ if __name__ == "__main__":
                 target_info.append(target_csv_data_file)
             target_file = pandas.concat(target_info)
             target_file = target_file[target_file.time.notnull()] # remove all NaN time values
-            target_file['time'] =pandas.to_datetime(target_file.time)
+            target_file['time'] = pandas.to_datetime(target_file.time)
+
+            #convert to chicago time
+            target_file['time'] -= timedelta(minutes=300)
+
             assert target_file.time.dt.normalize().nunique() == len(list_of_csv)
 
             logger.info('Finished reading target {}'.format(target_name))
