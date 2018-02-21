@@ -20,7 +20,7 @@ import numpy as np
 import multiprocessing
 #from progressbar import ProgressBar, SimpleProgress
 import tqdm
-'''
+
 def parallelize_dataframe(distance_range, time_range, target_file, data_file, func):
     num_cores = multiprocessing.cpu_count()-1 #leave one free to not freeze machine
     num_partitions = 19000#num_cores #number of partitions to split dataframe
@@ -37,7 +37,7 @@ def parallelize_dataframe(distance_range, time_range, target_file, data_file, fu
     pool.join()
     df = pandas.concat(results)
     return df
-'''
+
 
 def closest(target_file_row, data_file_row, time_range, distance_range):
     try:
@@ -54,8 +54,8 @@ def closest_distance(target_file_row, data_file_row, distance_range):
     except:
         return False
 
-def analyze(distance_range, time_range, target_file, data_file):
-    #target_file, data_file, time_range, distance_range = args
+def analyze(args):
+    target_file, data_file, time_range, distance_range = args
     satisfied_target = []
     curr_df_date = data_file['time'][0] #current earliest date of data file
     for target_index, target_row in target_file.iterrows():
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     #Columns that are included in data_file
     fields = ['X', 'Y', 'USER_Event_Type', 'USER_Entry_Date___Time'] #changed the date field to the one that looks correct need to ask
     folder = '/Users/apple/Desktop/Dataset/GPS/'
-    filename = 'FA171521_ARCGIS_GPS_50.csv'
+    filename = 'FA171521_ARCGIS_GPS_50_V1_2.csv'
     #Include the x, y, user_event_type, user_clrdate
     logger.info('Started reading data file')
     data_file = pandas.read_csv(os.path.join(folder, filename),skipinitialspace=True, usecols=fields)
@@ -118,13 +118,15 @@ if __name__ == "__main__":
 
             target_file = target_file.sort_values(by=['time'], ascending=[True])
 
-            #list = parallelize_dataframe(100, 60, target_file, data_file, analyze)
-            list = analyze(100, 60, target_file, data_file)
+            list = parallelize_dataframe(100, 60, target_file, data_file, analyze)
+            #list = analyze(100, 60, target_file, data_file)
             logger.info('Finished analysis for target {}'.format(target_name))
 
-            #list.to_csv(str(target_name) + '.csv', sep=',', encoding='utf-8')
+            list.to_csv(str(target_name) + '.csv', sep=',', encoding='utf-8')
+            """
             with open(str(target_name) + '.csv', 'w', newline='') as csvfile:
                 writer = csv.writer(csvfile)
                 writer.writerows(list)
+            """
 
             exit()
