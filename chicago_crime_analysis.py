@@ -20,6 +20,7 @@ import numpy as np
 import multiprocessing
 #from progressbar import ProgressBar, SimpleProgress
 import tqdm
+import csv
 
 def parallelize_dataframe(distance_range, time_range, target_file, data_file, func):
     num_cores = multiprocessing.cpu_count()-1 #leave one free to not freeze machine
@@ -36,7 +37,7 @@ def parallelize_dataframe(distance_range, time_range, target_file, data_file, fu
     pool.close()
     pool.join()
     df = pandas.concat(results)
-    return df
+    return results
 
 
 def closest(target_file_row, data_file_row, time_range, distance_range):
@@ -54,10 +55,10 @@ def closest_distance(target_file_row, data_file_row, distance_range):
     except:
         return False
 
-def analyze(args):
-    target_file, data_file, time_range, distance_range = args
+def analyze(target_file, data_file, time_range, distance_range):
+    #target_file, data_file, time_range, distance_range = args
     satisfied_target = []
-    curr_df_date = data_file['time'][0] #current earliest date of data file
+    curr_df_date = data_file['time'][13000] #current earliest date of data file
     for target_index, target_row in target_file.iterrows():
         #print('Checking target row {}'.format(target_index))
         #logger.info('Checking target row {}'.format(target_index))
@@ -92,6 +93,15 @@ if __name__ == "__main__":
     #data_file = data_file[data_file.time.notnull()] # remove all NaN time values
     data_file['time'] = pandas.to_datetime(data_file.time)
     logger.info('Finished reading data file')
+
+    ##############
+
+    #select first 100
+    data_file = data_file[13000:19000]
+
+    ##############
+
+    #sort data file
     data_file = data_file.sort_values(by=['time'], ascending=[True])
 
     #Each target include time, x, y
@@ -113,7 +123,9 @@ if __name__ == "__main__":
             #convert to chicago time
             target_file['time'] -= timedelta(minutes=300)
 
-            assert target_file.time.dt.normalize().nunique() == len(list_of_csv)
+            target_file = target_file[0:500]
+
+            #assert target_file.time.dt.normalize().nunique() == len(list_of_csv)
 
             logger.info('Finished reading target {}'.format(target_name))
             #start analysis for one person
@@ -122,15 +134,14 @@ if __name__ == "__main__":
 
             target_file = target_file.sort_values(by=['time'], ascending=[True])
 
-            list = parallelize_dataframe(100, 60, target_file, data_file, analyze)
+            list = analyze(target_file, data_file, 60, 100)
             #list = analyze(100, 60, target_file, data_file)
             logger.info('Finished analysis for target {}'.format(target_name))
 
-            list.to_csv(str(target_name) + '.csv', sep=',', encoding='utf-8')
-            """
-            with open(str(target_name) + '.csv', 'w', newline='') as csvfile:
+            #list.to_csv(str(target_name) + '.csv', sep=',', encoding='utf-8')
+
+            with open(str(target_name) + '.csv', 'w') as csvfile:
                 writer = csv.writer(csvfile)
                 writer.writerows(list)
-            """
 
             exit()
