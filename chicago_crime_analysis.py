@@ -18,14 +18,17 @@ logging.basicConfig(format='%(asctime)s %(message)s', datefmt='%m/%d/%Y %I:%M:%S
 logger = logging.getLogger(__name__)
 import numpy as np
 import multiprocessing
-#from progressbar import ProgressBar, SimpleProgress
 import tqdm
-import csv
+import argparse
 
-def parallelize_dataframe(distance_range, time_range, target_file, data_file, func):
+def parallelize_dataframe(distance_range, time_range, target_file, data_file, which, num_partitions, func):
+    if(which==1):
+        split_file =  target_file
+    else:
+        split_file = data_file
     num_cores = multiprocessing.cpu_count()-1 #leave one free to not freeze machine
-    num_partitions = 19000#num_cores #number of partitions to split dataframe
-    df_split = np.array_split(target_file, num_partitions)
+    #num_partitions = 10#num_cores #number of partitions to split dataframe
+    df_split = np.array_split(split_file, num_partitions)
     print len(df_split)
     a = [(split, data_file, time_range, distance_range) for split in df_split]
     print len(a)
@@ -33,10 +36,9 @@ def parallelize_dataframe(distance_range, time_range, target_file, data_file, fu
     results = []
     for x in tqdm.tqdm(pool.imap_unordered(func, a), total=num_partitions):
         results.extend(x)
-    #df = pandas.concat(pool.map(func, a))
     pool.close()
     pool.join()
-    df = pandas.concat(results)
+    print results
     return results
 
 
@@ -55,8 +57,8 @@ def closest_distance(target_file_row, data_file_row, distance_range):
     except:
         return False
 
-def analyze(target_file, data_file, time_range, distance_range):
-    #target_file, data_file, time_range, distance_range = args
+def analyze(args):#target_file, data_file, time_range, distance_range):
+    target_file, data_file, time_range, distance_range = args
     satisfied_target = []
     curr_df_date = data_file['time'][13000] #current earliest date of data file
     for target_index, target_row in target_file.iterrows():
@@ -77,15 +79,24 @@ def analyze(target_file, data_file, time_range, distance_range):
                 info_list = target_row.tolist()
                 info_list.extend(data_row.tolist())
                 satisfied_target.append(info_list)
-
+    print "satisfied_target",satisfied_target
     return satisfied_target
 
 
 if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description="train.py")
+    parser.add_argument("-folder", default='Dataset/GPS/', help="Path to the *-train.pt file from preprocess.py")
+    parser.add_argument("-filename", default='FA171521_ARCGIS_GPS_50_V1_2.csv', help="Filename for police file")
+    parser.add_argument("-parallelize", default=1, type=int, help="run in parallel:1, no:0")
+    parser.add_argument("-which", default=1, type=int, help="which file to split for parallel. 1:fitbit file, otherwise fitbit file")
+    parser.add_argument("-npartitions", default=10, type=int, help="number of partitions for parallel, needs to be smaller than number of file rows")
+    args = parser.parse_args()
+
     #Columns that are included in data_file
     fields = ['X', 'Y', 'USER_Event_Type', 'USER_Entry_Date___Time'] #changed the date field to the one that looks correct need to ask
-    folder = '/Users/apple/Desktop/Dataset/GPS/'
-    filename = 'FA171521_ARCGIS_GPS_50_V1_2.csv'
+    folder = args.folder
+    filename = args.filename
     #Include the x, y, user_event_type, user_clrdate
     logger.info('Started reading data file')
     data_file = pandas.read_csv(os.path.join(folder, filename),skipinitialspace=True, usecols=fields)
@@ -95,10 +106,8 @@ if __name__ == "__main__":
     logger.info('Finished reading data file')
 
     ##############
-
     #select first 100
     data_file = data_file[13000:19000]
-
     ##############
 
     #sort data file
@@ -119,29 +128,29 @@ if __name__ == "__main__":
             target_file = pandas.concat(target_info)
             target_file = target_file[target_file.time.notnull()] # remove all NaN time values
             target_file['time'] = pandas.to_datetime(target_file.time)
-
             #convert to chicago time
             target_file['time'] -= timedelta(minutes=300)
 
+            ##############
+            #select first 1500
             target_file = target_file[0:500]
+            ##############
 
             #assert target_file.time.dt.normalize().nunique() == len(list_of_csv)
-
             logger.info('Finished reading target {}'.format(target_name))
             #start analysis for one person
             logger.info('Started analysis for target {}'.format(target_name))
-            #list = analyze(100, 60, target_file, data_file)
 
             target_file = target_file.sort_values(by=['time'], ascending=[True])
 
-            list = analyze(target_file, data_file, 60, 100)
-            #list = analyze(100, 60, target_file, data_file)
+            if(args.parallelize):
+                list = parallelize_dataframe(100, 60, target_file, data_file, args.which, args.npartitions, analyze)
+            else:
+                arguments = target_file, data_file, 60, 100
+                list = analyze(arguments)
             logger.info('Finished analysis for target {}'.format(target_name))
 
-            #list.to_csv(str(target_name) + '.csv', sep=',', encoding='utf-8')
-
-            with open(str(target_name) + '.csv', 'w') as csvfile:
-                writer = csv.writer(csvfile)
-                writer.writerows(list)
+            df =  pandas.DataFrame(list)
+            df.to_csv(str(target_name) + '.csv', sep=',', encoding='utf-8')
 
             exit()
