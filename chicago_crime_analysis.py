@@ -38,7 +38,7 @@ def parallelize_dataframe(distance_range, time_range, target_file, data_file, wh
         results.extend(x)
     pool.close()
     pool.join()
-    print results
+
     return results
 
 
@@ -86,7 +86,7 @@ def analyze(args):#target_file, data_file, time_range, distance_range):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="train.py")
-    parser.add_argument("-folder", default='Dataset/GPS/', help="Path to the *-train.pt file from preprocess.py")
+    parser.add_argument("-folder", default='/Users/apple/Desktop/Dataset/GPS/', help="Path to the *-train.pt file from preprocess.py")
     parser.add_argument("-filename", default='FA171521_ARCGIS_GPS_50_V1_2.csv', help="Filename for police file")
     parser.add_argument("-parallelize", default=1, type=int, help="run in parallel:1, no:0")
     parser.add_argument("-which", default=1, type=int, help="which file to split for parallel. 1:fitbit file, otherwise fitbit file")
@@ -104,11 +104,6 @@ if __name__ == "__main__":
     #data_file = data_file[data_file.time.notnull()] # remove all NaN time values
     data_file['time'] = pandas.to_datetime(data_file.time)
     logger.info('Finished reading data file')
-
-    ##############
-    #select first 100
-    data_file = data_file[13000:19000]
-    ##############
 
     #sort data file
     data_file = data_file.sort_values(by=['time'], ascending=[True])
@@ -130,11 +125,6 @@ if __name__ == "__main__":
             target_file['time'] = pandas.to_datetime(target_file.time)
             #convert to chicago time
             target_file['time'] -= timedelta(minutes=300)
-
-            ##############
-            #select first 1500
-            target_file = target_file[0:500]
-            ##############
 
             #assert target_file.time.dt.normalize().nunique() == len(list_of_csv)
             logger.info('Finished reading target {}'.format(target_name))
