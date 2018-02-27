@@ -60,7 +60,7 @@ def closest_distance(target_file_row, data_file_row, distance_range):
 def analyze(args):#target_file, data_file, time_range, distance_range):
     target_file, data_file, time_range, distance_range = args
     satisfied_target = []
-    curr_df_date = data_file['time'][13000] #current earliest date of data file
+    curr_df_date = data_file['time'][0] #current earliest date of data file
     for target_index, target_row in target_file.iterrows():
         #print('Checking target row {}'.format(target_index))
         #logger.info('Checking target row {}'.format(target_index))
@@ -70,8 +70,8 @@ def analyze(args):#target_file, data_file, time_range, distance_range):
         find_first = False
         for row_index, data_row in data_file[data_file['time'] >= curr_df_date].iterrows():
             curr_row_date = data_row.time
-            if curr_df_date < lower_bound_date: continue
-            if curr_df_date > upper_bound_date: break
+            if curr_row_date < lower_bound_date: continue
+            if curr_row_date > upper_bound_date: break
             if find_first == False:
                 curr_df_date = curr_row_date
                 find_first = True
@@ -79,7 +79,7 @@ def analyze(args):#target_file, data_file, time_range, distance_range):
                 info_list = target_row.tolist()
                 info_list.extend(data_row.tolist())
                 satisfied_target.append(info_list)
-    print "satisfied_target",satisfied_target
+    #print "satisfied_target",satisfied_target
     return satisfied_target
 
 
