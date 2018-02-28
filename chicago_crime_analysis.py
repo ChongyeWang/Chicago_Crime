@@ -62,7 +62,7 @@ def closest_distance(target_file_row, data_file_row, distance_range):
 def analyze(args):#target_file, data_file, time_range, distance_range):
     target_file, data_file, time_range, distance_range = args
     satisfied_target = []
-    curr_df_date = data_file['time'][13000] #current earliest date of data file
+    curr_df_date = data_file['time'][0] #[13000] #current earliest date of data file
     for target_index, target_row in tqdm.tqdm(target_file.iterrows(), total=len(target_file)):
         #print('Checking target row {}'.format(target_index))
         #logger.info('Checking target row {}'.format(target_index))
