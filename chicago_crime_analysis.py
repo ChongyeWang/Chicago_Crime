@@ -21,6 +21,8 @@ import multiprocessing
 import tqdm
 import argparse
 
+#ps -u | grep chicago_crime_analysis.py | awk '{print $2}' | xargs kill -KILL #kills all parallel processes
+
 def parallelize_dataframe(distance_range, time_range, target_file, data_file, which, num_partitions, func):
     if(which==1):
         split_file =  target_file
@@ -61,7 +63,7 @@ def analyze(args):#target_file, data_file, time_range, distance_range):
     target_file, data_file, time_range, distance_range = args
     satisfied_target = []
     curr_df_date = data_file['time'][13000] #current earliest date of data file
-    for target_index, target_row in target_file.iterrows():
+    for target_index, target_row in tqdm.tqdm(target_file.iterrows(), total=len(target_file)):
         #print('Checking target row {}'.format(target_index))
         #logger.info('Checking target row {}'.format(target_index))
         curr_target_date = target_row.time
@@ -83,12 +85,45 @@ def analyze(args):#target_file, data_file, time_range, distance_range):
     return satisfied_target
 
 
+def run_one_folder(folder, target_name, args):
+    sub_dir = os.path.join(folder, target_name)
+    list_of_csv = glob.glob(sub_dir + "/*.csv")
+    target_info = []
+    logger.info('Started reading target {}'.format(target_name))
+    #concat all files in one
+    for csv_file in list_of_csv:
+        field = ['time', 'lat', 'lon']
+        target_csv_data_file = pandas.read_csv(csv_file, skipinitialspace=True, usecols=field)
+        target_info.append(target_csv_data_file)
+    target_file = pandas.concat(target_info)
+    target_file = target_file[target_file.time.notnull()] # remove all NaN time values
+    target_file['time'] = pandas.to_datetime(target_file.time)
+    #convert to chicago time
+    target_file['time'] -= timedelta(minutes=300)
+
+    #assert target_file.time.dt.normalize().nunique() == len(list_of_csv)
+    logger.info('Finished reading target {}'.format(target_name))
+    #start analysis for one person
+    logger.info('Started analysis for target {}'.format(target_name))
+
+    target_file = target_file.sort_values(by=['time'], ascending=[True])
+
+    if(args.parallelize):
+        list = parallelize_dataframe(100, 60, target_file, data_file, args.which, args.npartitions, analyze)
+    else:
+        arguments = target_file, data_file, 60, 100
+        list = analyze(arguments)
+    logger.info('Finished analysis for target {}'.format(target_name))
+
+    return list
+
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="train.py")
     parser.add_argument("-folder", default='Dataset/GPS/', help="Path to the *-train.pt file from preprocess.py")
     parser.add_argument("-filename", default='FA171521_ARCGIS_GPS_50_V1_2.csv', help="Filename for police file")
-    parser.add_argument("-parallelize", default=1, type=int, help="run in parallel:1, no:0")
+    parser.add_argument("-tgt_folder", default=None, help="Target folder")
+    parser.add_argument("-parallelize", default=0, type=int, help="run in parallel:1, no:0")
     parser.add_argument("-which", default=1, type=int, help="which file to split for parallel. 1:fitbit file, otherwise fitbit file")
     parser.add_argument("-npartitions", default=10, type=int, help="number of partitions for parallel, needs to be smaller than number of file rows")
     args = parser.parse_args()
@@ -105,52 +140,19 @@ if __name__ == "__main__":
     data_file['time'] = pandas.to_datetime(data_file.time)
     logger.info('Finished reading data file')
 
-    ##############
-    #select first 100
-    data_file = data_file[13000:19000]
-    ##############
-
     #sort data file
     data_file = data_file.sort_values(by=['time'], ascending=[True])
 
-    #Each target include time, x, y
-    for target_name in os.listdir(folder):
-        if os.path.isdir(os.path.join(folder, target_name)):
-            sub_dir = os.path.join(folder, target_name)
-            list_of_csv = glob.glob(sub_dir + "/*.csv")
-            target_info = []
-            logger.info('Started reading target {}'.format(target_name))
-            #concat all files in one
-            for csv_file in list_of_csv:
-                field = ['time', 'lat', 'lon']
-                target_csv_data_file = pandas.read_csv(csv_file, skipinitialspace=True, usecols=field)
-                target_info.append(target_csv_data_file)
-            target_file = pandas.concat(target_info)
-            target_file = target_file[target_file.time.notnull()] # remove all NaN time values
-            target_file['time'] = pandas.to_datetime(target_file.time)
-            #convert to chicago time
-            target_file['time'] -= timedelta(minutes=300)
-
-            ##############
-            #select first 1500
-            target_file = target_file[0:500]
-            ##############
-
-            #assert target_file.time.dt.normalize().nunique() == len(list_of_csv)
-            logger.info('Finished reading target {}'.format(target_name))
-            #start analysis for one person
-            logger.info('Started analysis for target {}'.format(target_name))
-
-            target_file = target_file.sort_values(by=['time'], ascending=[True])
-
-            if(args.parallelize):
-                list = parallelize_dataframe(100, 60, target_file, data_file, args.which, args.npartitions, analyze)
-            else:
-                arguments = target_file, data_file, 60, 100
-                list = analyze(arguments)
-            logger.info('Finished analysis for target {}'.format(target_name))
-
+    if(args.tgt_folder):
+        if os.path.isdir(os.path.join(folder, args.tgt_folder)):
+            list =  run_one_folder(folder, args.tgt_folder, args)
             df =  pandas.DataFrame(list)
-            df.to_csv(str(target_name) + '.csv', sep=',', encoding='utf-8')
+            df.to_csv(str(args.tgt_folder) + '.csv', sep=',', encoding='utf-8')
+    else:
+        #Each target include time, x, y
+        for target_name in os.listdir(folder):
+            if os.path.isdir(os.path.join(folder, target_name)):
+                list = run_one_folder(folder, target_name, args)
+                df =  pandas.DataFrame(list)
+                df.to_csv(str(target_name) + '.csv', sep=',', encoding='utf-8')
 
-            exit()
