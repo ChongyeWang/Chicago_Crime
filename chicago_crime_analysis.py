@@ -71,7 +71,7 @@ def analyze(args):#target_file, data_file, time_range, distance_range):
     nCrime = 0
     row_start = 0
     row_offset = 0
-    
+
     for target_index, target_row in target_file.iterrows():
         #print('Checking target row {}'.format(target_index))
         #logger.info('Checking target row {}'.format(target_index))
@@ -108,10 +108,10 @@ def analyze(args):#target_file, data_file, time_range, distance_range):
                 info_list.extend([distance])
                 satisfied_target.append(info_list)
                 nCrime = nCrime + 1
-                
+
         #Subtract 1 to ensure next loop doesn't skip a row
         row_start = row_start + row_offset - 1
-         
+
         #print("Next row start: ", row_start, "(", row_index, ")")
         #print("Next crime start: ", curr_row_date, "(", data_file.iloc[row_start].time, ")")
         #print("Comparisons: ", nCount)
@@ -162,7 +162,7 @@ if __name__ == "__main__":
 
     subject = '3'
     distance = 100
-    #crimedata = 'Incident Reports.csv' 
+    #crimedata = 'Incident Reports.csv'
     #analysis_type = 'IR'
 
     crimedata = 'FA171521_ARCGIS_GPS_50_V1_2.csv'
@@ -170,7 +170,7 @@ if __name__ == "__main__":
 
     print ("Program start for: ", subject)
     parser = argparse.ArgumentParser(description="train.py")
-    parser.add_argument("-folder", default='Dataset/GPS/', help="Path to the *-train.pt file from preprocess.py")
+    parser.add_argument("-folder", default='/Users/apple/Desktop/Dataset/GPS/', help="Path to the *-train.pt file from preprocess.py")
     parser.add_argument("-filename", default=crimedata, help="Filename for police file")
     parser.add_argument("-tgt_folder", default=subject, help="Target folder")
     parser.add_argument("-parallelize", default=0, type=int, help="run in parallel:1, no:0")
@@ -206,7 +206,7 @@ if __name__ == "__main__":
             #output results
             df =  pandas.DataFrame(list)
             df.to_csv(str(args.tgt_folder) + ' ' + analysis_type + '.csv', sep=',', encoding='utf-8')
-            
+
     else:
         #Each target include time, x, y
         for target_name in os.listdir(folder):
@@ -214,4 +214,3 @@ if __name__ == "__main__":
                 list = run_one_folder(folder, target_name, args)
                 df =  pandas.DataFrame(list)
                 df.to_csv(str(target_name) + '.csv', sep=',', encoding='utf-8')
-
