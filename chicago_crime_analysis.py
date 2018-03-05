@@ -149,6 +149,7 @@ def run_one_folder(folder, target_name, args):
 
     target_file = target_file.sort_values(by=['time'], ascending=[True])
 
+
     if(args.parallelize):
         print("Run analysis in parralel")
         list = parallelize_dataframe(args.distance, args.time, target_file, data_file, args.which, args.npartitions, analyze)
@@ -171,7 +172,7 @@ if __name__ == "__main__":
 
     print ("Program start for: ", subject)
     parser = argparse.ArgumentParser(description="train.py")
-    parser.add_argument("-folder", default='Dataset/GPS/', help="Path to the *-train.pt file from preprocess.py")
+    parser.add_argument("-folder", default='GPS/', help="Path to the *-train.pt file from preprocess.py")
     parser.add_argument("-filename", default=crimedata, help="Filename for police file")
     parser.add_argument("-tgt_folder", default=subject, help="Target folder")
     parser.add_argument("-parallelize", default=0, type=int, help="run in parallel:1, no:0")
