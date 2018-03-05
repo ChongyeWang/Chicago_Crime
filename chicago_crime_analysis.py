@@ -94,8 +94,7 @@ def analyze(args):#target_file, data_file, time_range, distance_range):
             nCount = nCount + 1
 
             if curr_row_date < lower_bound_date: continue
-            if curr_row_date > upper_bound_date:
-                 break
+            if curr_row_date > upper_bound_date: break
             # curr_row_date >= low && curr_row_date <= high
             #if find_first == False:
             #    curr_df_date = curr_row_date
@@ -131,6 +130,9 @@ def run_one_folder(folder, target_name, args):
         field = ['time', 'lat', 'lon']
         target_csv_data_file = pandas.read_csv(csv_file, skipinitialspace=True, usecols=field)
         target_info.append(target_csv_data_file)
+        #REMOVE THIS AFTER DEBUGGING
+        for index, row in target_csv_data_file.iterrows():
+            print csv_file, index, pandas.to_datetime(row.time)
     target_file = pandas.concat(target_info)
     target_file = target_file[target_file.time.notnull()] # remove all NaN time values
     target_file['time'] = pandas.to_datetime(target_file.time)
@@ -170,7 +172,7 @@ if __name__ == "__main__":
 
     print ("Program start for: ", subject)
     parser = argparse.ArgumentParser(description="train.py")
-    parser.add_argument("-folder", default='/Users/apple/Desktop/Dataset/GPS/', help="Path to the *-train.pt file from preprocess.py")
+    parser.add_argument("-folder", default='Dataset/GPS/', help="Path to the *-train.pt file from preprocess.py")
     parser.add_argument("-filename", default=crimedata, help="Filename for police file")
     parser.add_argument("-tgt_folder", default=subject, help="Target folder")
     parser.add_argument("-parallelize", default=0, type=int, help="run in parallel:1, no:0")
