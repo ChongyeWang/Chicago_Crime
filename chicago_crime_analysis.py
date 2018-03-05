@@ -151,10 +151,10 @@ def run_one_folder(folder, target_name, args):
 
     if(args.parallelize):
         print("Run analysis in parralel")
-        list = parallelize_dataframe(args.distance, 60, target_file, data_file, args.which, args.npartitions, analyze)
+        list = parallelize_dataframe(args.distance, args.time, target_file, data_file, args.which, args.npartitions, analyze)
     else:
         print("Run analysis sequentially")
-        arguments = target_file, data_file, 60, args.distance
+        arguments = target_file, data_file, args.time, args.distance
         list = analyze(arguments)
     logger.info('Finished analysis for target {}'.format(target_name))
 
@@ -163,7 +163,6 @@ def run_one_folder(folder, target_name, args):
 if __name__ == "__main__":
 
     subject = '3'
-    distance = 100
     #crimedata = 'Incident Reports.csv'
     #analysis_type = 'IR'
 
@@ -178,7 +177,8 @@ if __name__ == "__main__":
     parser.add_argument("-parallelize", default=0, type=int, help="run in parallel:1, no:0")
     parser.add_argument("-which", default=1, type=int, help="which file to split for parallel. 1:fitbit file, otherwise fitbit file")
     parser.add_argument("-npartitions", default=10, type=int, help="number of partitions for parallel, needs to be smaller than number of file rows")
-    parser.add_argument("-distance", default=distance)
+    parser.add_argument("-distance", default=100, type=int, help="write this")
+    parser.add_argument("-time", default=60, type=int, help="write this")
     args = parser.parse_args()
 
     starttime = time.time()
