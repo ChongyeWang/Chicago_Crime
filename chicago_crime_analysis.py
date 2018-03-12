@@ -54,11 +54,8 @@ def closest_distance(target_file_row, data_file_row, distance_range):
 def analyze(args):#target_file, data_file, time_range, distance_range):
     target_file, data_file, time_range, distance_range = args
     satisfied_target = []
-    curr_df_date = data_file['USER_Entry_Date___Time'][0]  #current earliest date of data file
-    nCount = 0
     nCrime = 0
     row_start = 0
-    row_offset = 0
 
     for target_index, target_row in target_file.iterrows():
 
@@ -97,7 +94,7 @@ def analyze(args):#target_file, data_file, time_range, distance_range):
     return satisfied_target
 
 
-def run_one_folder(folder, target_name, args):
+def run_one_folder(folder, target_name, fields, args):
     sub_dir = os.path.join(folder, target_name)
     list_of_csv = glob.glob(sub_dir + "/*.csv")
     print("Mobile files detected: ", len(list_of_csv))
@@ -105,11 +102,7 @@ def run_one_folder(folder, target_name, args):
     logger.info('Started reading target {}'.format(target_name))
     #concat all files in one
     for csv_file in list_of_csv:
-        field = ['time', 'lat', 'lon', 'elevation', 'accuracy', 'bearing', 'speed', \
-        'satellites', 'provider', 'hdop', 'vdop', 'pdop', 'geoidheight', 'ageofdgpsdata', \
-        'dgpsid', 'activity', 'battery', 'annotation']
-
-        target_csv_data_file = pandas.read_csv(csv_file, skipinitialspace=True, usecols=field)
+        target_csv_data_file = pandas.read_csv(csv_file, skipinitialspace=True, usecols=fields)
         target_info.append(target_csv_data_file)
 
         #REMOVE THIS AFTER DEBUGGING
@@ -142,18 +135,12 @@ def run_one_folder(folder, target_name, args):
 
 if __name__ == "__main__":
 
-    subject = '2'
     #crimedata = 'Incident Reports.csv'
-    #analysis_type = 'IR'
-
-    crimedata = 'FA171521_ARCGIS_GPS_50_V1_2.csv'
-    analysis_type = '911'
-
-    #print ("Program start for: ", subject)
     parser = argparse.ArgumentParser(description="train.py")
     parser.add_argument("-folder", default='GPS/', help="Path to the *-train.pt file from preprocess.py")
-    parser.add_argument("-filename", default=crimedata, help="Filename for police file")
-    parser.add_argument("-tgt_folder", default=subject, help="Target folder")
+    parser.add_argument("-filename", default='FA171521_ARCGIS_GPS_50_V1_2.csv', help="Filename for police file")
+    parser.add_argument("-analysis_type", default='911', help="either 911 or IR?")
+    parser.add_argument("-tgt_folder", default=None, help="Target folder")
     parser.add_argument("-parallelize", default=0, type=int, help="run in parallel:1, no:0")
     parser.add_argument("-which", default=1, type=int, help="which file to split for parallel. 1:fitbit file, otherwise fitbit file")
     parser.add_argument("-npartitions", default=10, type=int, help="number of partitions for parallel, needs to be smaller than number of file rows")
@@ -163,23 +150,26 @@ if __name__ == "__main__":
 
     starttime = time.time()
     #Columns that are included in data_file
-    fields = ['ObjectID', 'Loc_name', 'Status', 'Score', 'Match_type', 'Match_addr', \
+    police_fields = ['ObjectID', 'Loc_name', 'Status', 'Score', 'Match_type', 'Match_addr', \
     'Addr_type', 'AddNum', 'Side', 'StPreDir', 'StPreType', 'StName', 'StType', 'StDir', \
     'StAddr', 'City', 'Subregion', 'Region', 'Postal', 'Country', 'LangCode', 'Distance', \
     'X', 'Y', 'DisplayX', 'DisplayY', 'Xmin', 'Xmax', 'Ymin', 'Ymax', 'AddNumFrom', 'AddNumTo', \
     'RegionAbbr', 'Rank', 'IN_SingleLine', 'USER_Eventnumber', 'USER_Entry_Date___Time', \
     'USER_Clrdate', 'USER_Event_Type', 'USER_Address_by_Block', 'USER_District_of_Incident', \
-    'USER_Beat_of_Incident', 'USER_Findisposition'] #changed the date field to the one that looks correct need to ask
+                     'USER_Beat_of_Incident', 'USER_Findisposition'] #changed the date field to the one that looks correct need to ask
+
+
 
     folder = args.folder
     filename = args.filename
 
+    target_fields = ['time', 'lat', 'lon', 'elevation', 'accuracy', 'bearing', 'speed', \
+             'satellites', 'provider', 'hdop', 'vdop', 'pdop', 'geoidheight', 'ageofdgpsdata', \
+             'dgpsid', 'activity', 'battery', 'annotation']
+
     #Include the x, y, user_event_type, user_clrdate
     logger.info('Started reading data file')
-    data_file = pandas.read_csv(os.path.join(folder, filename),skipinitialspace=True, usecols=fields)
-
-    #data_file = data_file.rename(columns={'USER_Entry_Date___Time': 'time', 'X':'lon', 'Y':'lat'}) #lets keep all times times
-
+    data_file = pandas.read_csv(os.path.join(folder, filename), skipinitialspace=True, usecols=police_fields)
     #data_file = data_file[data_file.time.notnull()] # remove all NaN time values
     data_file['USER_Entry_Date___Time'] = pandas.to_datetime(data_file.USER_Entry_Date___Time)
     logger.info('Finished reading data file')
@@ -190,8 +180,10 @@ if __name__ == "__main__":
 
     print ("Crimes loaded:", len(data_file.index))
 
+    "=================================================================================================="
     list_of_df = []#Add each dataframe to the list
 
+    "not needed, target_name is the folder"
     list_of_target = ['2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '17']
 
     for target_name in list_of_target:
@@ -201,7 +193,7 @@ if __name__ == "__main__":
         if(args.tgt_folder):
             #check subject data exists
             if os.path.isdir(os.path.join(folder, args.tgt_folder)):
-                list =  run_one_folder(folder, args.tgt_folder, args)
+                list =  run_one_folder(folder, args.tgt_folder, target_fields, args)
                 #add target name
                 for sub_list in list:
                     sub_list.append(target_name)
@@ -214,43 +206,31 @@ if __name__ == "__main__":
             #Each target include time, x, y
             for target_name in os.listdir(folder):
                 if os.path.isdir(os.path.join(folder, target_name)):
-                    list = run_one_folder(folder, target_name, args)
+                    list = run_one_folder(folder, target_name, target_fields, args)
                     #add target name
                     for sub_list in list:
                         sub_list.append(target_name)
 
                     df =  pandas.DataFrame(list)
+                    #Put the headers here before making the new column
+                    column_names = target_fields+police_fields+['Distance']
+                    df.columns = column_names
+
+                    df['Target'] = target_name
                     list_of_df.append(df)
                     #df.to_csv(str(target_name) + '.csv', sep=',', encoding='utf-8')
-                    break
 
-    target_column_name = ['time', 'lat', 'lon', 'elevation', 'accuracy', 'bearing', 'speed', \
-    'satellites', 'provider', 'hdop', 'vdop', 'pdop', 'geoidheight', 'ageofdgpsdata', \
-    'dgpsid', 'activity', 'battery', 'annotation']
-
-    data_file_column_name = ['ObjectID', 'Loc_name', 'Status', 'Score', 'Match_type', 'Match_addr', \
-    'Addr_type', 'AddNum', 'Side', 'StPreDir', 'StPreType', 'StName', 'StType', 'StDir', \
-    'StAddr', 'City', 'Subregion', 'Region', 'Postal', 'Country', 'LangCode', 'Distance', \
-    'X', 'Y', 'DisplayX', 'DisplayY', 'Xmin', 'Xmax', 'Ymin', 'Ymax', 'AddNumFrom', 'AddNumTo', \
-    'RegionAbbr', 'Rank', 'IN_SingleLine', 'USER_Eventnumber', 'USER_Entry_Date___Time', \
-    'USER_Clrdate', 'USER_Event_Type', 'USER_Address_by_Block', 'USER_District_of_Incident', \
-    'USER_Beat_of_Incident', 'USER_Findisposition']
-
-    column_distance_name = ['Distance']
-
-    target_from_column_name = ['Target']
-
-    result_column_name = target_column_name + data_file_column_name + column_distance_name + target_from_column_name
-
-    #Cancat all dataframes
+                #Cancat all dataframes
     result_df = pandas.concat(list_of_df)
 
-    #Change the column name of the dataframe
-    result_df.columns = result_column_name
 
     print(result_df)
 
-    result_df = result_df.drop_duplicates(subset=data_file_column_name)
+    result_df = result_df.drop_duplicates(subset=police_fields)
     print(result_df)
 
-    result_df.to_csv('result' + '.csv', sep=',', encoding='utf-8')
+    df.to_csv('result_' + analysis_type + '.csv', sep=',', encoding='utf-8')
+
+    "=================================================================================================="
+
+
