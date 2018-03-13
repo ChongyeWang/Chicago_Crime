@@ -1,7 +1,6 @@
 """
-This file transfers the csv data file of the
-Chicago crime event and information of research
-targets.
+Find the matching target from the target
+folders to the police data file.
 """
 import pandas
 import os
@@ -42,6 +41,9 @@ def parallelize_dataframe(distance_range, time_range, target_file, data_file, wh
 
 
 def closest_distance(target_file_row, data_file_row, distance_range):
+    """
+    Check if the distance is within the range.
+    """
     try:
         distance = geopy.distance.vincenty((target_file_row.lat, target_file_row.lon), (data_file_row.Y, data_file_row.X)).m
         #return distance <= distance_range
@@ -52,6 +54,9 @@ def closest_distance(target_file_row, data_file_row, distance_range):
         return -1
 
 def analyze(args):#target_file, data_file, time_range, distance_range):
+    """
+    Check if target data matches the plice data.
+    """
     target_file, data_file, time_range, distance_range = args
     satisfied_target = []
     nCrime = 0
@@ -80,9 +85,7 @@ def analyze(args):#target_file, data_file, time_range, distance_range):
             if (distance != -1):
                 info_list = target_row.tolist()
                 info_list.extend(data_row.tolist())
-
                 info_list.extend([distance])#add distance
-
                 satisfied_target.append(info_list)
                 nCrime = nCrime + 1
 
@@ -95,6 +98,9 @@ def analyze(args):#target_file, data_file, time_range, distance_range):
 
 
 def run_one_folder(folder, target_name, fields, args):
+    """
+    Run for one target.
+    """
     sub_dir = os.path.join(folder, target_name)
     list_of_csv = glob.glob(sub_dir + "/*.csv")
     print("Mobile files detected: ", len(list_of_csv))
@@ -135,6 +141,8 @@ def run_one_folder(folder, target_name, fields, args):
 
 if __name__ == "__main__":
 
+    analysis_type = '911'
+
     #crimedata = 'Incident Reports.csv'
     parser = argparse.ArgumentParser(description="train.py")
     parser.add_argument("-folder", default='GPS/', help="Path to the *-train.pt file from preprocess.py")
@@ -149,7 +157,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     starttime = time.time()
-    #Columns that are included in data_file
+
     police_fields = ['ObjectID', 'Loc_name', 'Status', 'Score', 'Match_type', 'Match_addr', \
     'Addr_type', 'AddNum', 'Side', 'StPreDir', 'StPreType', 'StName', 'StType', 'StDir', \
     'StAddr', 'City', 'Subregion', 'Region', 'Postal', 'Country', 'LangCode', 'Distance', \
@@ -157,8 +165,6 @@ if __name__ == "__main__":
     'RegionAbbr', 'Rank', 'IN_SingleLine', 'USER_Eventnumber', 'USER_Entry_Date___Time', \
     'USER_Clrdate', 'USER_Event_Type', 'USER_Address_by_Block', 'USER_District_of_Incident', \
                      'USER_Beat_of_Incident', 'USER_Findisposition'] #changed the date field to the one that looks correct need to ask
-
-
 
     folder = args.folder
     filename = args.filename
@@ -180,57 +186,29 @@ if __name__ == "__main__":
 
     print ("Crimes loaded:", len(data_file.index))
 
-    "=================================================================================================="
-    list_of_df = []#Add each dataframe to the list
+    if(args.tgt_folder):#run one folder
+        #check subject data exists
+        if os.path.isdir(os.path.join(folder, args.tgt_folder)):
+            list = run_one_folder(folder, args.tgt_folder, target_fields, args)
+            df =  pandas.DataFrame(list)
+            #Put the headers here before making the new column
+            column_names = target_fields + police_fields + ['Distance']
+            df.columns = column_names
+            df.to_csv(args.tgt_folder + '.csv', sep=',', encoding='utf-8')
 
-    "not needed, target_name is the folder"
-    list_of_target = ['2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '17']
-
-    for target_name in list_of_target:
-
-        args.tgt_folder = target_name #change the current target folder
-
-        if(args.tgt_folder):
-            #check subject data exists
-            if os.path.isdir(os.path.join(folder, args.tgt_folder)):
-                list =  run_one_folder(folder, args.tgt_folder, target_fields, args)
-                #add target name
-                for sub_list in list:
-                    sub_list.append(target_name)
-
+    else:#run all folders
+        list_of_df = []#Add each dataframe to the list
+        #Each target include time, x, y
+        for target_name in os.listdir(folder):
+            if os.path.isdir(os.path.join(folder, target_name)):
+                list = run_one_folder(folder, target_name, target_fields, args)
                 df =  pandas.DataFrame(list)
+                #Put the headers here before making the new column
+                column_names = target_fields + police_fields + ['Distance']
+                df.columns = column_names
+                df['Target'] = target_name
                 list_of_df.append(df)
 
-                #df.to_csv(str(args.tgt_folder) + ' ' + analysis_type + '.csv', sep=',', encoding='utf-8')
-        else:
-            #Each target include time, x, y
-            for target_name in os.listdir(folder):
-                if os.path.isdir(os.path.join(folder, target_name)):
-                    list = run_one_folder(folder, target_name, target_fields, args)
-                    #add target name
-                    for sub_list in list:
-                        sub_list.append(target_name)
-
-                    df =  pandas.DataFrame(list)
-                    #Put the headers here before making the new column
-                    column_names = target_fields+police_fields+['Distance']
-                    df.columns = column_names
-
-                    df['Target'] = target_name
-                    list_of_df.append(df)
-                    #df.to_csv(str(target_name) + '.csv', sep=',', encoding='utf-8')
-
-                #Cancat all dataframes
-    result_df = pandas.concat(list_of_df)
-
-
-    print(result_df)
-
-    result_df = result_df.drop_duplicates(subset=police_fields)
-    print(result_df)
-
-    df.to_csv('result_' + analysis_type + '.csv', sep=',', encoding='utf-8')
-
-    "=================================================================================================="
-
-
+        result_df = pandas.concat(list_of_df)
+        result_df = result_df.drop_duplicates(subset=police_fields)#remove duplicates
+        result_df.to_csv('result_' + analysis_type + '.csv', sep=',', encoding='utf-8')
