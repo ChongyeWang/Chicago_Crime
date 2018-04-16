@@ -8,7 +8,7 @@ for i, item in enumerate(data['activities-steps-intraday']['dataset']):
     date = data['activities-steps'][0]['dateTime']+"T"+item['time']
     if(item['value']>0):
         json_entries.append({"date": str(date), "details": {"value": item['value'], "object": "vmName"}})
-        print item['value']
+        print(item['value'])
 with open("mtdata.js", "w") as f:
     f.write("var data = [{\"name\":\"Person1\", \"data\":")
     f.write(json.dumps(json_entries, ensure_ascii=False))
@@ -21,7 +21,7 @@ for i, item in enumerate(data['activities-heart-intraday']['dataset']):
     date = data['activities-heart'][0]['dateTime']+"T"+item['time']
     if(item['value']>0):
         json_entries.append({"date": str(date), "details": {"value": item['value'], "object": "vmName"}})
-        print item['value']
+        print(item['value'])
 with open("hrdata.js", "w") as f:
     f.write("var data = [{\"name\":\"Person1\", \"data\":")
     f.write(json.dumps(json_entries, ensure_ascii=False))
