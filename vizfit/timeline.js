@@ -6,6 +6,7 @@ angular.module("app", [])
             for (var x in json) { //json lives in external file for testing
                 var data = [];
                 for (var y in json[x].data) {
+                    console.log(new Date(json[x].data[y].date));
                     data.push({
                         date: new Date(json[x].data[y].date),
                         pivot: json[x].data[y].details.value,
@@ -24,46 +25,77 @@ angular.module("app", [])
 
         var fullData = Data(data);
 
+        var setofdates = [];
+        for(var k in fullData){
+            var formatDate = d3.timeFormat("%Y-%m-%e");
+            var datek = formatDate(fullData[k].date);
+            if(!setofdates.includes(datek)){
+                setofdates.push(datek);
+            }
+        }
+        console.log(setofdates)
+
         // *** Set up svg
-        var margin = { top: 20, right: 20, bottom: 100, left: 60 };
-        width = 960 - margin.left - margin.right,
-            height = 300 - margin.top - margin.bottom;
+        var margin = {
+                top: 30,
+                right: 20,
+                bottom: 30,
+                left: 50
+            },
+            width = 960 - margin.left - margin.right,
+            height = 500 - margin.top - margin.bottom;
+
 
         var tooltip = d3.select("#chart").append("div")
             .attr("class", "tooltip")
             .style("opacity", 0);
 
         var x = d3.scaleTime()
-            .range([0, width-margin.left])
+            .range([0, width])
             .nice();
 
         var y = d3.scaleLinear().range([height, 0]);
 
         // *** Parse the date / time
-        var formatDate = d3.timeFormat("%Y-%m-%eT%H:%M:%S");
+        //var formatDate = d3.timeFormat("%Y-%m-%eT%H:%M:%S");
 
         // *** Scale the range of the data
-        var earliestDate = d3.min(fullData, function(d) { return d.date; });
+        /*var earliestDate = d3.min(fullData, function(d) { return d.date; });
         var latestDate = d3.max(fullData, function(d) {  return d.date; });
 
         var minPivot = d3.min(fullData, function(d) { return d.pivot; });
         var maxPivot = d3.max(fullData, function(d) { return d.pivot; });
 
         x.domain([earliestDate, latestDate]);
-        y.domain([minPivot,maxPivot]);
+        y.domain([minPivot,maxPivot]);*/
 
-        var xAxis = d3.axisBottom(x).tickFormat(d3.timeFormat("%m/%e %H:%M:%S"));
+        x.domain(d3.extent(fullData, function (d) { return d.date; })).nice();
+        y.domain(d3.extent(fullData, function (d) { return d.pivot; })).nice();
+
+        var xAxis = d3.axisBottom(x).tickFormat(d3.timeFormat("%H:%M"));
         var yAxis = d3.axisLeft(y);
 
         var brush = d3.brush().extent([[0, 0], [width, height]]).on("end", brushended),
             idleTimeout,
             idleDelay = 350;
 
-        var svg = d3.select("#chart").append("svg")
+
+        var chart_svg = d3.select("#chart").append("svg")
             .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-            .append("g")
+            .attr("height", height + margin.top + margin.bottom);
+
+
+        var svg = chart_svg.append("g")
             .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        svg.append("text")
+            .attr("x", (width / 2))
+            .attr("y", 0 - (margin.top / 2))
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .style("text-decoration", "underline")
+            .text(setofdates);
+
 
         var clip = svg.append("defs").append("svg:clipPath")
             .attr("id", "clip")
@@ -87,19 +119,19 @@ angular.module("app", [])
             .attr("class", "x axis")
             .attr('id', "axis--x")
             .attr("transform", "translate(0," + height + ")")
-            .call(xAxis)
-            .selectAll("text")
-            .style("text-anchor", "end")
-            .attr("dx", "-.8em")
-            .attr("dy", ".15em")
-            .attr("transform", "rotate(-65)");
+            .call(xAxis);
+            //.selectAll("text")
+            //.style("text-anchor", "end")
+            //.attr("dx", "-.8em")
+            //.attr("dy", ".15em");
+            //.attr("transform", "rotate(-65)");
 
 
         svg.append("text")
             .style("text-anchor", "end")
             .attr("x", width)
             .attr("y", height - 8)
-            .text("Date");
+            .text("Time");
 
         // y axis
         svg.append("g")
@@ -117,6 +149,12 @@ angular.module("app", [])
         scatter.append("g")
             .attr("class", "brush")
             .call(brush);
+
+        $scope.reset = function() {
+            x.domain(d3.extent(fullData, function (d) { return d.date; })).nice();
+            y.domain(d3.extent(fullData, function (d) { return d.pivot; })).nice();
+            zooming();
+        };
 
         $scope.updateFilter = function(){
 
@@ -174,43 +212,41 @@ angular.module("app", [])
                         .duration(500)
                         .style("opacity", 0);
                 });
+
         }
 
 
 
         function brushended() {
-
             var s = d3.event.selection;
+            console.log(s)
             if (!s) {
                 if (!idleTimeout) return idleTimeout = setTimeout(idled, idleDelay);
-                x.domain(d3.extent(fullData, function (d) { return d.date; })).nice();
-                y.domain(d3.extent(fullData, function (d) { return d.pivot; })).nice();
             } else {
-
                 x.domain([s[0][0], s[1][0]].map(x.invert, x));
                 y.domain([s[1][1], s[0][1]].map(y.invert, y));
                 scatter.select(".brush").call(brush.move, null);
             }
-            zoom();
+            zooming();
         }
 
         function idled() {
             idleTimeout = null;
         }
 
-        function zoom() {
-
+        function zooming() {
             var t = scatter.transition().duration(750);
-            svg.select("#axis--x").transition(t).call(xAxis).selectAll("text")
-                .style("text-anchor", "end")
-                .attr("dx", "-.8em")
-                .attr("dy", ".15em")
-                .attr("transform", "rotate(-65)");
+            svg.select("#axis--x").transition(t).call(xAxis).selectAll("text");
+                //.style("text-anchor", "end")
+                //.attr("dx", "-.8em")
+                //.attr("dy", ".15em");
+                //.attr("transform", "rotate(-65)");
 
             svg.select("#axis--y").transition(t).call(yAxis);
             scatter.selectAll("circle").transition(t)
-                .attr("cx", function (d) { return x(d.date); })
-                .attr("cy", function (d) { return y(d.pivot); });
+                .attr("cx", function (d) { return x(d.date); });
+                //.attr("cy", function (d) { return y(d.pivot); });
         }
+
 
     });
