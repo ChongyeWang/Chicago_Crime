@@ -6,7 +6,6 @@ angular.module("app", [])
             for (var x in json) { //json lives in external file for testing
                 var data = [];
                 for (var y in json[x].data) {
-                    console.log(new Date(json[x].data[y].date));
                     data.push({
                         date: new Date(json[x].data[y].date),
                         pivot: json[x].data[y].details.value,
@@ -75,10 +74,12 @@ angular.module("app", [])
         var xAxis = d3.axisBottom(x).tickFormat(d3.timeFormat("%H:%M"));
         var yAxis = d3.axisLeft(y);
 
+
         var brush = d3.brush().extent([[0, 0], [width, height]]).on("end", brushended),
             idleTimeout,
             idleDelay = 350;
 
+        var zoom = d3.zoom().extent([[0, 0], [width, height]]).on("zoom", zoomed);
 
         var chart_svg = d3.select("#chart").append("svg")
             .attr("width", width + margin.left + margin.right)
@@ -87,6 +88,8 @@ angular.module("app", [])
 
         var svg = chart_svg.append("g")
             .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        zoom(svg);
 
         svg.append("text")
             .attr("x", (width / 2))
@@ -246,6 +249,15 @@ angular.module("app", [])
             scatter.selectAll("circle").transition(t)
                 .attr("cx", function (d) { return x(d.date); });
                 //.attr("cy", function (d) { return y(d.pivot); });
+        }
+
+
+        function zoomed() {
+            if (d3.event.sourceEvent && d3.event.sourceEvent.type === "brush") return; // ignore zoom-by-brush
+            var t = d3.event.transform;
+            x.domain(t.rescaleX(x).domain());
+            svg.select("#axis--x").call(xAxis);
+            scatter.select(".brush").call(brush.move, x.range().map(t.invertX, t));
         }
 
 

@@ -1,4 +1,6 @@
-vizfit/viz_data/*
+*.DS_STORE
+vizfit/viz_data/s2*.json
+vizfit/viz_data/*.js
 GPS/
 .idea/
 Dataset/
