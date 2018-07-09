@@ -15,6 +15,7 @@ for i, item in enumerate(data['activities-steps-intraday']['dataset']):
         rows.append([str(date), item['value']+0.5, "person3"])
 with open('viz_data/dummyMT.csv', "w") as output:
     writer = csv.writer(output, lineterminator='\n')
+    writer.writerow(['timestamp', 'value', 'person'])
     writer.writerows(rows)
 
 data = json.load(open('viz_data/dummyHR.json'))
@@ -28,6 +29,7 @@ for i, item in enumerate(data['activities-heart-intraday']['dataset']):
         rows.append([str(date), item['value']+0.5, "person3"])
 with open('viz_data/dummyHR.csv', "w") as output:
     writer = csv.writer(output, lineterminator='\n')
+    writer.writerow(['timestamp', 'value', 'person'])
     writer.writerows(rows)
 
 # json_entries = []
