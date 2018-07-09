@@ -34,18 +34,8 @@ angular.module("app", [])
                 .append('option')
                 .attr('value', function (d) { return d.text })
                 .text(function (d) { return d.text ;})
-            var span2 = d3.select("#chart").append('span2')
-                .text('Select Plot type: ')
-            var plotInput = d3.select("#chart").append('select')
-                .attr('id','pSelect')
-                .on('change',yChange)
-                .selectAll('option')
-                .data(plottype)
-                .enter()
-                .append('option')
-                .attr('value', function (d) { return d.text })
-                .text(function (d) { return d.text ;})
             d3.select("#chart").append('br')
+
 
             // *** Set up svg
             var margin = {
@@ -197,79 +187,45 @@ angular.module("app", [])
                         filteredPivotObj.push(data[k]);
                     }
                 }
-                var plot_type = d3.select("#pSelect").node().value
-                plotData(filteredPivotObj, plot_type);
+
+                plotData(filteredPivotObj);
             };
-            var plot_type = d3.select("#pSelect").node().value
-            plotData(data, plot_type);
 
-            function plotData(data, type) {
+            plotData(data);
+            function plotData(data) {
                 svg.selectAll(".line").remove();
-                scatter.selectAll(".dot").remove();
 
-                if(type=='line')
-                    scatter.append("path")
-                        .datum(data)
-                        .attr("class", "line")
-                        .attr("d", line)
-                        .on("mouseover", function (d) {
-                            tooltip.transition()
-                                .duration(200)
-                                .style("opacity", .9);
-                            tooltip.html(d.person + "-" + d.value + " ,Timestamp: " + d.timestamp)
-                                .style("left", (d3.event.pageX) + "px")
-                                .style("top", (d3.event.pageY) + "px");
-                        })
-                        .on("mouseout", function (d) {
-                            tooltip.transition()
-                                .duration(500)
-                                .style("opacity", 0);
-                        });
-                else
-                    scatter.selectAll(".dot")
-                        .data(data)
-                        .enter().append("circle")
-                        .attr("class", "dot")
-                        .attr("r", 4)
-                        .attr("cx", function (d) {
-                            return x(d.timestamp);
-                        })
-                        .attr("cy", function (d) {
-                            return y(d.value);
-                        })
-                        .attr("opacity", 0.5)
-                        .style("fill", function (d) {
-                            return color(cValue(d));
-                        })
-                        .on("mouseover", function (d) {
-                            tooltip.transition()
-                                .duration(200)
-                                .style("opacity", .9);
-                            tooltip.html(d.person + "-" + d.value + " ,Timestamp: " + d.timestamp)
-                                .style("left", (d3.event.pageX) + "px")
-                                .style("top", (d3.event.pageY) + "px");
-                        })
-                        .on("mouseout", function (d) {
-                            tooltip.transition()
-                                .duration(500)
-                                .style("opacity", 0);
-                        });
+                scatter.append("path")
+                    .datum(data)
+                    .attr("class", "line")
+                    .attr("d", line)
+                    .on("mouseover", function (d) {
+                        tooltip.transition()
+                            .duration(200)
+                            .style("opacity", .9);
+                        tooltip.html(d.person + "-" + d.value + " ,Timestamp: " + d.timestamp)
+                            .style("left", (d3.event.pageX) + "px")
+                            .style("top", (d3.event.pageY) + "px");
+                    })
+                    .on("mouseout", function (d) {
+                        tooltip.transition()
+                            .duration(500)
+                            .style("opacity", 0);
+                    });
 
             }
 
             // Get a subset of the data based on the group
             function getFilteredData(data, group) {
+                console.log(group)
                 return data.filter(function(point) { return point.person == group; });
             }
 
             function yChange() {
                 var groupdata = data
-                var plot_person = d3.select("#ySelect").node().value
-                console.log(plot_person)
-                if(plot_person != "All")
-                    groupdata = getFilteredData(data, plot_person);
-                plot_type = d3.select("#pSelect").node().value
-                plotData(groupdata, plot_type);
+                if(this.value != "All")
+                    groupdata = getFilteredData(data,  this.value);
+                plotData(groupdata);
             }
 
             function brushended() {
@@ -296,12 +252,6 @@ angular.module("app", [])
                 svg.select("#axis--y").transition(t).call(yAxis);
 
                 scatter.select(".line").attr("d", line);
-
-                scatter.selectAll("circle").transition(t)
-                    .attr("cx", function (d) {
-                        return x(d.timestamp);
-                    });
-                //.attr("cy", function (d) { return y(d.pivot); });
             }
 
             function zoomed() {

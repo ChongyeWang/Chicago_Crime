@@ -15,6 +15,13 @@ div.tooltip {
     pointer-events: none;
 }
 
+/* Style the lines by removing the fill and applying a stroke */
+.line {
+    fill: none;
+    stroke: #ffab00;
+    stroke-width: 3;
+}
+
 #chart {
     position: fixed;
     left: 0px;
